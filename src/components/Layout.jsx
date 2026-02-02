@@ -22,15 +22,10 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard,
-  CloudUpload,
-  Folder,
-  Description,
-  SmartToy,
   People,
   Settings,
   Logout,
   Notifications,
-  AccountCircle,
 } from '@mui/icons-material'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -47,19 +42,14 @@ const Layout = () => {
 
   const isAdmin = user?.role === 'admin'
 
+  // ✅ Hide these items from sidebar (Create Invoice, Invoice Management, Reports, Generate Report, Live AI Agent)
+  // Non-admin now only sees Dashboard.
   const menuItems = isAdmin
     ? [
         { text: 'Dashboard', icon: <Dashboard />, path: '/admin' },
         { text: 'Clients', icon: <People />, path: '/admin/clients' },
       ]
-    : [
-        { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
-        { text: 'Create Invoice', icon: <CloudUpload />, path: '/create-invoice' },
-        { text: 'Invoice Management', icon: <Folder />, path: '/invoices' },
-        { text: 'Reports', icon: <Description />, path: '/reports' },
-        { text: 'Generate Report', icon: <Description />, path: '/generate-report' },
-        { text: 'Live AI Agent', icon: <SmartToy />, path: '/live-ai' },
-      ]
+    : [{ text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' }]
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -125,10 +115,8 @@ const Layout = () => {
                 },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
+              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+              <ListItemText
                 primary={item.text}
                 primaryTypographyProps={{
                   fontWeight: location.pathname === item.path ? 600 : 400,
@@ -164,21 +152,22 @@ const Layout = () => {
           >
             <MenuIcon />
           </IconButton>
+
           <Typography
             variant="h6"
             noWrap
             component="div"
             sx={{ flexGrow: 1, fontWeight: 600 }}
           >
-            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
+            {menuItems.find((item) => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
-          
+
           <IconButton color="inherit" sx={{ mr: 2 }}>
             <Badge badgeContent={3} color="error">
               <Notifications />
             </Badge>
           </IconButton>
-          
+
           <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
             <Avatar
               sx={{
@@ -190,7 +179,7 @@ const Layout = () => {
               {user?.username?.charAt(0).toUpperCase()}
             </Avatar>
           </IconButton>
-          
+
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
@@ -219,11 +208,8 @@ const Layout = () => {
           </Menu>
         </Toolbar>
       </AppBar>
-      
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
+
+      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -241,6 +227,7 @@ const Layout = () => {
         >
           {drawer}
         </Drawer>
+
         <Drawer
           variant="permanent"
           sx={{
@@ -256,7 +243,7 @@ const Layout = () => {
           {drawer}
         </Drawer>
       </Box>
-      
+
       <Box
         component="main"
         sx={{
