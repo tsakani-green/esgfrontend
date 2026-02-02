@@ -34,8 +34,26 @@ const Login = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+
   const { login } = useUser();
   const navigate = useNavigate();
+
+  const handleResendActivation = async () => {
+    setResendMessage('');
+    setResendLoading(true);
+    try {
+      const emailOrUsername = username || '';
+      const res = await axios.post(`${API_BASE}/api/auth/resend-activation`, { email: emailOrUsername }, { timeout: 15000 });
+      setResendMessage(res.data?.activation_link ? 'Activation link sent (dev)' : 'Activation email sent. Check your inbox.');
+    } catch (err) {
+      console.error('Resend activation error:', err);
+      setResendMessage(err.response?.data?.detail || 'Failed to send activation email');
+    } finally {
+      setResendLoading(false);
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,9 +135,21 @@ const Login = () => {
 
           <Box component="form" onSubmit={handleSubmit}>
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
+              <Box sx={{ mb: 2 }}>
+                <Alert severity="error">
+                  {error}
+                </Alert>
+
+                {/* If account is not activated, give the user a quick resend action */}
+                {error.toLowerCase().includes('not activated') && (
+                  <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button size="small" onClick={handleResendActivation} disabled={resendLoading}>
+                      {resendLoading ? 'Sending...' : 'Resend activation email'}
+                    </Button>
+                    {resendMessage && <Typography variant="caption" sx={{ ml: 1 }}>{resendMessage}</Typography>}
+                  </Box>
+                )}
+              </Box>
             )}
 
             <TextField
