@@ -1,3 +1,4 @@
+// frontend/src/pages/Signup.jsx
 import React, { useState } from 'react'
 import { useNavigate, Link as RouterLink } from 'react-router-dom'
 import {
@@ -15,9 +16,8 @@ import {
   InputAdornment,
   Grid,
 } from '@mui/material'
-import { 
-  PersonAdd as PersonAddIcon, 
-  Visibility, 
+import {
+  Visibility,
   VisibilityOff,
   Email,
   Lock,
@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Assessment,
   Nature,
+  Launch,
 } from '@mui/icons-material'
 import { useUser } from '../contexts/UserContext'
 import logo from '../assets/AfricaESG.AI.png'
@@ -45,63 +46,72 @@ const Signup = () => {
   const [success, setSuccess] = useState('')
   const [activationLink, setActivationLink] = useState('')
   const [loading, setLoading] = useState(false)
-  
+
   const { signup } = useUser()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
-    
+    setActivationLink('')
+
     // Validation
     if (!formData.username || !formData.email || !formData.password || !formData.full_name) {
       setError('Please fill in all required fields')
       return
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       return
     }
-    
+
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long')
       return
     }
-    
+
     setLoading(true)
 
     try {
-      const result = await signup(formData)
-      
-      if (result.success) {
-        // If backend returned an activation link (development fallback), surface it prominently
+      // IMPORTANT: only send backend-expected fields (avoid 400 from extra fields like confirmPassword)
+      const payload = {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        full_name: formData.full_name.trim(),
+        company: (formData.company || '').trim(),
+      }
+
+      const result = await signup(payload)
+
+      if (result?.success) {
         if (result.activation_link) {
+          // Dev fallback: show activation link if backend couldn't send email
           setActivationLink(result.activation_link)
-          setSuccess('🎉 Account created — activation link available (development)')
-          // do NOT auto-redirect so the developer can click the link
-        } else {
-          setSuccess(result.message)
-          // Show email confirmation message
-          setSuccess('🎉 Account created successfully! Please check your email for activation link.')
-          // Redirect after 5 seconds to give time to read the message
-          setTimeout(() => {
-            navigate('/dashboard')
-          }, 5000)
+          setSuccess('🎉 Account created — activation link available (development fallback)')
+          return
         }
+
+        setSuccess('🎉 Account created! Please check your email for the activation link.')
+
+        // Redirect to login (NOT dashboard) because user must activate first
+        setTimeout(() => {
+          navigate('/login')
+        }, 5000)
       } else {
-        setError(result.error || 'Failed to create account')
+        setError(result?.error || 'Failed to create account')
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create account')
+      setError(err?.response?.data?.detail || err?.message || 'Failed to create account')
     } finally {
       setLoading(false)
     }
@@ -123,39 +133,19 @@ const Signup = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(15, 23, 42, 0.2) 0%, transparent 50%)',
+          background:
+            'radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(15, 23, 42, 0.2) 0%, transparent 50%)',
         },
       }}
     >
       {/* Floating Elements */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '10%',
-          left: '10%',
-          opacity: 0.1,
-        }}
-      >
+      <Box sx={{ position: 'absolute', top: '10%', left: '10%', opacity: 0.1 }}>
         <TrendingUp sx={{ fontSize: 80, color: 'white' }} />
       </Box>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '60%',
-          right: '15%',
-          opacity: 0.1,
-        }}
-      >
+      <Box sx={{ position: 'absolute', top: '60%', right: '15%', opacity: 0.1 }}>
         <Nature sx={{ fontSize: 100, color: 'white' }} />
       </Box>
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: '20%',
-          left: '20%',
-          opacity: 0.1,
-        }}
-      >
+      <Box sx={{ position: 'absolute', bottom: '20%', left: '20%', opacity: 0.1 }}>
         <Assessment sx={{ fontSize: 90, color: 'white' }} />
       </Box>
 
@@ -207,7 +197,7 @@ const Signup = () => {
                 {activationLink ? (
                   <Box sx={{ mt: 1 }}>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Development activation link (click to open):
+                      Activation link (click to open):
                     </Typography>
 
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -223,23 +213,19 @@ const Signup = () => {
                         Copy link
                       </Button>
 
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => window.open(activationLink, '_blank')}
-                      >
-                        Open link
+                      <Button size="small" variant="contained" startIcon={<Launch />} onClick={() => window.open(activationLink, '_blank')}>
+                        Open
                       </Button>
                     </Box>
 
                     <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                      This link is shown only in development and expires in 24 hours.
+                      This link expires in 24 hours.
                     </Typography>
                   </Box>
                 ) : (
                   <>
                     <Typography variant="body2" sx={{ mt: 1 }}>
-                      Redirecting to dashboard in 5 seconds...
+                      Redirecting to login in 5 seconds...
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem' }}>
                       📧 Check your inbox for the activation email
@@ -342,10 +328,7 @@ const Signup = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
+                    <IconButton onClick={() => setShowPassword((s) => !s)} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -371,10 +354,7 @@ const Signup = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      edge="end"
-                    >
+                    <IconButton onClick={() => setShowConfirmPassword((s) => !s)} edge="end">
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -388,7 +368,7 @@ const Signup = () => {
               fullWidth
               variant="contained"
               size="large"
-              loading={loading}
+              disabled={loading}
               sx={{
                 py: 1.5,
                 mb: 2,
@@ -412,8 +392,7 @@ const Signup = () => {
 
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2">
-                <strong>Note:</strong> New accounts start with limited access. 
-                An administrator will assign portfolio access to view specific data.
+                <strong>Note:</strong> New accounts start with limited access. An administrator will assign portfolio access.
               </Typography>
             </Alert>
 
