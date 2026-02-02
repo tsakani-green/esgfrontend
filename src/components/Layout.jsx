@@ -42,14 +42,15 @@ const Layout = () => {
 
   const isAdmin = user?.role === 'admin'
 
-  // ✅ Hide these items from sidebar (Create Invoice, Invoice Management, Reports, Generate Report, Live AI Agent)
-  // Non-admin now only sees Dashboard.
+  // ✅ Client sidebar: ONLY Dashboard
   const menuItems = isAdmin
     ? [
         { text: 'Dashboard', icon: <Dashboard />, path: '/admin' },
         { text: 'Clients', icon: <People />, path: '/admin/clients' },
       ]
-    : [{ text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' }]
+    : [
+        { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+      ]
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -93,7 +94,9 @@ const Layout = () => {
           </Box>
         </Box>
       </Toolbar>
+
       <Divider />
+
       <List sx={{ px: 2 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
@@ -115,7 +118,10 @@ const Layout = () => {
                 },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 40 }}>
+                {item.icon}
+              </ListItemIcon>
+
               <ListItemText
                 primary={item.text}
                 primaryTypographyProps={{
@@ -132,6 +138,7 @@ const Layout = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <CssBaseline />
+
       <AppBar
         position="fixed"
         sx={{
@@ -159,7 +166,7 @@ const Layout = () => {
             component="div"
             sx={{ flexGrow: 1, fontWeight: 600 }}
           >
-            {menuItems.find((item) => item.path === location.pathname)?.text || 'Dashboard'}
+            {menuItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
 
           <IconButton color="inherit" sx={{ mr: 2 }}>
@@ -192,13 +199,16 @@ const Layout = () => {
                 {user?.username}
               </Typography>
             </MenuItem>
+
             <Divider />
+
             <MenuItem onClick={() => navigate('/settings')}>
               <ListItemIcon>
                 <Settings fontSize="small" />
               </ListItemIcon>
               Settings
             </MenuItem>
+
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <Logout fontSize="small" />
@@ -209,14 +219,15 @@ const Layout = () => {
         </Toolbar>
       </AppBar>
 
-      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
+      <Box
+        component="nav"
+        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+      >
         <Drawer
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': {
