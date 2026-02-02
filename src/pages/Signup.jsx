@@ -26,7 +26,6 @@ import {
   TrendingUp,
   Assessment,
   Nature,
-  Launch,
 } from '@mui/icons-material'
 import { useUser } from '../contexts/UserContext'
 import logo from '../assets/AfricaESG.AI.png'
@@ -44,26 +43,23 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [activationLink, setActivationLink] = useState('')
   const [loading, setLoading] = useState(false)
 
   const { signup } = useUser()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [e.target.name]: e.target.value,
-    }))
+    })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
-    setActivationLink('')
 
-    // Validation
     if (!formData.username || !formData.email || !formData.password || !formData.full_name) {
       setError('Please fill in all required fields')
       return
@@ -80,38 +76,19 @@ const Signup = () => {
     }
 
     setLoading(true)
-
     try {
-      // IMPORTANT: only send backend-expected fields (avoid 400 from extra fields like confirmPassword)
-      const payload = {
-        username: formData.username.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        full_name: formData.full_name.trim(),
-        company: (formData.company || '').trim(),
-      }
+      const result = await signup(formData)
 
-      const result = await signup(payload)
-
-      if (result?.success) {
-        if (result.activation_link) {
-          // Dev fallback: show activation link if backend couldn't send email
-          setActivationLink(result.activation_link)
-          setSuccess('🎉 Account created — activation link available (development fallback)')
-          return
-        }
-
+      if (result.success) {
         setSuccess('🎉 Account created! Please check your email for the activation link.')
-
-        // Redirect to login (NOT dashboard) because user must activate first
         setTimeout(() => {
           navigate('/login')
         }, 5000)
       } else {
-        setError(result?.error || 'Failed to create account')
+        setError(result.error || 'Failed to create account')
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || err?.message || 'Failed to create account')
+      setError(err.response?.data?.detail || 'Failed to create account')
     } finally {
       setLoading(false)
     }
@@ -160,19 +137,13 @@ const Signup = () => {
             borderRadius: 3,
           }}
         >
-          {/* Logo/Brand Section */}
+          {/* Brand */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Box
               component="img"
               src={logo}
               alt="AfricaESG.AI"
-              sx={{
-                width: 64,
-                height: 64,
-                objectFit: 'contain',
-                mx: 'auto',
-                mb: 2,
-              }}
+              sx={{ width: 64, height: 64, objectFit: 'contain', mx: 'auto', mb: 2 }}
             />
             <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
               Join AfricaESG.AI
@@ -182,7 +153,6 @@ const Signup = () => {
             </Typography>
           </Box>
 
-          {/* Signup Form */}
           <Box component="form" onSubmit={handleSubmit}>
             {error && (
               <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
@@ -193,45 +163,12 @@ const Signup = () => {
             {success && (
               <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
                 {success}
-
-                {activationLink ? (
-                  <Box sx={{ mt: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Activation link (click to open):
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Link href={activationLink} target="_blank" rel="noopener" sx={{ wordBreak: 'break-all' }}>
-                        {activationLink}
-                      </Link>
-
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => navigator.clipboard?.writeText(activationLink)}
-                      >
-                        Copy link
-                      </Button>
-
-                      <Button size="small" variant="contained" startIcon={<Launch />} onClick={() => window.open(activationLink, '_blank')}>
-                        Open
-                      </Button>
-                    </Box>
-
-                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                      This link expires in 24 hours.
-                    </Typography>
-                  </Box>
-                ) : (
-                  <>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Redirecting to login in 5 seconds...
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem' }}>
-                      📧 Check your inbox for the activation email
-                    </Typography>
-                  </>
-                )}
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Redirecting to login in 5 seconds...
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1, fontSize: '0.875rem' }}>
+                  📧 Check your inbox for the activation email
+                </Typography>
               </Alert>
             )}
 
@@ -328,7 +265,7 @@ const Signup = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword((s) => !s)} edge="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -354,7 +291,7 @@ const Signup = () => {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowConfirmPassword((s) => !s)} edge="end">
+                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)} edge="end">
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
@@ -392,7 +329,8 @@ const Signup = () => {
 
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2">
-                <strong>Note:</strong> New accounts start with limited access. An administrator will assign portfolio access.
+                <strong>Note:</strong> New accounts start with limited access. An administrator will
+                assign portfolio access to view specific data.
               </Typography>
             </Alert>
 
@@ -448,7 +386,6 @@ const Signup = () => {
           </Box>
         </Paper>
 
-        {/* Footer */}
         <Box sx={{ textAlign: 'center', mt: 3 }}>
           <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
             ©GreenBDG Africa Pty Ltd. All rights reserved

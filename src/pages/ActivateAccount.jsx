@@ -14,13 +14,11 @@ import {
 import { CheckCircle, Error as ErrorIcon, Email, Launch } from '@mui/icons-material'
 import axios from 'axios'
 import logo from '../assets/AfricaESG.AI.png'
-
-// Use the same API base you use everywhere else
-import { API_BASE } from '../lib/api' // <-- adjust if your API helper file is elsewhere
+import { API_BASE } from '../lib/api'
 
 const ActivateAccount = () => {
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState('loading') // loading | success | error
+  const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('')
   const [userInfo, setUserInfo] = useState(null)
 
@@ -84,7 +82,6 @@ const ActivateAccount = () => {
             textAlign: 'center',
           }}
         >
-          {/* Logo */}
           <Box sx={{ mb: 4 }}>
             <Box
               component="img"
@@ -100,7 +97,6 @@ const ActivateAccount = () => {
             </Typography>
           </Box>
 
-          {/* Status Content */}
           <Box sx={{ mb: 4 }}>
             {status === 'loading' && (
               <Box>
@@ -184,7 +180,6 @@ const ActivateAccount = () => {
             )}
           </Box>
 
-          {/* Help Information */}
           <Box sx={{ bgcolor: 'info.50', p: 3, borderRadius: 2, textAlign: 'left' }}>
             <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
               <Email sx={{ mr: 1, fontSize: 20 }} />
