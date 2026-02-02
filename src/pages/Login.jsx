@@ -17,9 +17,9 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Close, Email } from "@mui/icons-material";
-import axios from "axios";
-import { API_BASE } from "../lib/api.js";
 import { useUser } from "../contexts/UserContext";
+import axios from "axios";
+import { API_BASE } from "../lib/api";
 import logo from "../assets/AfricaESG.AI.png";
 
 const Login = () => {
@@ -52,7 +52,7 @@ const Login = () => {
         setError(result.error || "Failed to login");
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || err?.message || "Failed to login");
+      setError(err.response?.data?.detail || "Failed to login");
     } finally {
       setLoading(false);
     }
@@ -64,13 +64,11 @@ const Login = () => {
     setResetLoading(true);
 
     try {
-      const API_URL = API_BASE || "";
       await axios.post(
-        `${API_URL}/api/auth/forgot-password`,
+        `${API_BASE}/api/auth/forgot-password`,
         { email: resetEmail },
-        { timeout: 20000 }
+        { timeout: 30000 }
       );
-
       setResetSuccess(true);
       setResetEmail("");
     } catch (err) {
@@ -106,14 +104,8 @@ const Login = () => {
             <Box
               component="img"
               src={logo}
-              alt="GreenBDG"
-              sx={{
-                width: 64,
-                height: 64,
-                objectFit: "contain",
-                mx: "auto",
-                mb: 2,
-              }}
+              alt="AfricaESG.AI"
+              sx={{ width: 64, height: 64, objectFit: "contain", mx: "auto", mb: 2 }}
             />
             <Typography component="h1" variant="h4" gutterBottom>
               GreenBDG
@@ -241,31 +233,12 @@ const Login = () => {
             </Box>
           ) : (
             <Box sx={{ textAlign: "center", py: 2 }}>
-              <Box sx={{ mb: 3 }}>
-                <Box
-                  sx={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: "50%",
-                    backgroundColor: "success.main",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    mx: "auto",
-                    mb: 2,
-                  }}
-                >
-                  <Email sx={{ fontSize: 32, color: "white" }} />
-                </Box>
-                <Typography variant="h6" gutterBottom>
-                  Check Your Email
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  We've sent a password reset link to your email address. Please check your inbox
-                  and follow the instructions to reset your password.
-                </Typography>
-              </Box>
-
+              <Typography variant="h6" gutterBottom>
+                Check Your Email
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                We've sent a password reset link to your email address.
+              </Typography>
               <DialogActions sx={{ justifyContent: "center", px: 0, pb: 0 }}>
                 <Button onClick={handleForgotPasswordClose} variant="contained">
                   Got it
