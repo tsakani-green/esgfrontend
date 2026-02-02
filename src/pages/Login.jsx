@@ -45,14 +45,14 @@ const Login = () => {
     try {
       const result = await login(username, password);
 
-      if (result?.success) {
+      if (result.success) {
         if (result.role === "admin") navigate("/admin");
         else navigate("/dashboard");
       } else {
-        setError(result?.error || "Failed to login");
+        setError(result.error || "Failed to login");
       }
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || "Failed to login");
+      setError(err?.response?.data?.detail || err?.message || "Failed to login");
     } finally {
       setLoading(false);
     }
@@ -65,11 +65,10 @@ const Login = () => {
 
     try {
       const API_URL = API_BASE || "";
-
       await axios.post(
         `${API_URL}/api/auth/forgot-password`,
         { email: resetEmail },
-        { timeout: 15000 }
+        { timeout: 20000 }
       );
 
       setResetSuccess(true);
@@ -77,9 +76,7 @@ const Login = () => {
     } catch (err) {
       console.error("Password reset error:", err);
       setResetError(
-        err.response?.data?.detail ||
-          err.message ||
-          "Failed to send reset email. Please try again."
+        err.response?.data?.detail || "Failed to send reset email. Please try again."
       );
     } finally {
       setResetLoading(false);
@@ -158,7 +155,7 @@ const Login = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={loading || !username || !password}
+              disabled={loading}
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
@@ -176,7 +173,7 @@ const Login = () => {
 
             <Box textAlign="center">
               <Link component={RouterLink} to="/signup" variant="body2">
-                Don&apos;t have an account? Sign up
+                Don't have an account? Sign up
               </Link>
             </Box>
           </Box>
@@ -192,13 +189,7 @@ const Login = () => {
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle sx={{ pb: 2 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <Email sx={{ mr: 2, color: "primary.main" }} />
               <Typography variant="h6">Reset Your Password</Typography>
@@ -213,8 +204,7 @@ const Login = () => {
           {!resetSuccess ? (
             <Box component="form" onSubmit={handleForgotPassword}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Enter your email address and we&apos;ll send you a link to reset
-                your password.
+                Enter your email address and we'll send you a link to reset your password.
               </Typography>
 
               {resetError && (
@@ -244,11 +234,7 @@ const Login = () => {
 
               <DialogActions sx={{ px: 0, pb: 0 }}>
                 <Button onClick={handleForgotPasswordClose}>Cancel</Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={resetLoading || !resetEmail}
-                >
+                <Button type="submit" variant="contained" disabled={resetLoading || !resetEmail}>
                   {resetLoading ? "Sending..." : "Send Reset Link"}
                 </Button>
               </DialogActions>
@@ -275,9 +261,8 @@ const Login = () => {
                   Check Your Email
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  We&apos;ve sent a password reset link to your email address.
-                  Please check your inbox and follow the instructions to reset
-                  your password.
+                  We've sent a password reset link to your email address. Please check your inbox
+                  and follow the instructions to reset your password.
                 </Typography>
               </Box>
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { API_BASE as API_URL, makeClient } from "../lib/api.js";
+import { API_BASE as API_URL } from "../lib/api.js"; // use the central API base
 
 const UserContext = createContext(null);
 
@@ -13,9 +13,8 @@ export const useUser = () => {
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
-    if (!stored) return null;
     try {
-      return JSON.parse(stored);
+      return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }
@@ -25,82 +24,25 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [allClients, setAllClients] = useState([]);
 
-  // shared axios client with auth header
-  const client = useMemo(() => makeClient(() => token), [token]);
+  // ---- helpers ----
+  const persistAuth = (accessToken, userObj) => {
+    if (accessToken) localStorage.setItem("token", accessToken);
+    else localStorage.removeItem("token");
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
-      if (!token) {
-        if (!cancelled) setLoading(false);
-        return;
-      }
-
-      // prevent infinite spinner
-      const timeout = setTimeout(() => {
-        if (!cancelled) setLoading(false);
-      }, 8000);
-
-      try {
-        const profile = await fetchUserProfile();
-        if (profile?.role === "admin") {
-          await fetchAllClients();
-        }
-      } finally {
-        clearTimeout(timeout);
-      }
-    };
-
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
-  const fetchAllClients = async () => {
-    if (!token) return [];
-    try {
-      const response = await client.get("/api/auth/admin/users", { timeout: 15000 });
-      const users = response.data?.users || [];
-      setAllClients(users);
-      return users;
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-      setAllClients([]);
-      return [];
-    }
+    if (userObj) localStorage.setItem("user", JSON.stringify(userObj));
+    else localStorage.removeItem("user");
   };
 
-  const fetchUserProfile = async () => {
-    try {
-      const response = await client.get("/api/auth/me", { timeout: 15000 });
-      setUser(response.data);
-      localStorage.setItem("user", JSON.stringify(response.data));
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-
-      // invalid/expired token
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setToken(null);
-        setUser(null);
-        setAllClients([]);
-      }
-
-      return null;
-    } finally {
-      setLoading(false);
-    }
+  const clearAuth = () => {
+    persistAuth(null, null);
+    setToken(null);
+    setUser(null);
+    setAllClients([]);
   };
 
-  // Helper: determine portfolio access based on username (your existing logic)
-  const getPortfolioAccessByUsername = (uname) => {
-    switch (uname) {
+  // Helper function to determine portfolio access based on username
+  const getPortfolioAccessByUsername = (username) => {
+    switch (username) {
       case "admin":
         return ["dube-trade-port", "bertha-house"];
       case "dube-user":
@@ -112,59 +54,145 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  const fetchUserProfile = async (activeToken = token) => {
+    if (!activeToken) return null;
+
+    try {
+      const response = await axios.get(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${activeToken}` },
+        timeout: 15000,
+      });
+
+      setUser(response.data);
+      localStorage.setItem("user", JSON.stringify(response.data));
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+
+      if (error.response?.status === 401) {
+        console.log("Invalid token, cleared authentication");
+        clearAuth();
+        return null;
+      }
+
+      // fallback: keep whatever is in localStorage if valid
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setUser(parsed);
+          return parsed;
+        } catch {
+          // ignore
+        }
+      }
+
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAllClients = async (activeToken = token) => {
+    if (!activeToken) return [];
+
+    try {
+      const response = await axios.get(`${API_URL}/api/auth/admin/users`, {
+        headers: { Authorization: `Bearer ${activeToken}` },
+        timeout: 15000,
+      });
+
+      const users = response.data?.users || [];
+      setAllClients(users);
+      return users;
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      setAllClients([]);
+      return [];
+    }
+  };
+
+  // boot: if token exists, fetch profile; if admin, fetch admin list
+  useEffect(() => {
+    let isMounted = true;
+
+    const run = async () => {
+      if (!token) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      // safety timeout: stop infinite loading in UI
+      const t = setTimeout(() => {
+        if (isMounted) setLoading(false);
+      }, 12000);
+
+      try {
+        const profile = await fetchUserProfile(token);
+        if (profile?.role === "admin") {
+          await fetchAllClients(token);
+        }
+      } finally {
+        clearTimeout(t);
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
+
   const login = async (username, password) => {
     try {
-      // ✅ FastAPI OAuth2PasswordRequestForm expects x-www-form-urlencoded
+      // ✅ FastAPI login typically expects: application/x-www-form-urlencoded
       const body = new URLSearchParams();
-      body.set("username", username);
-      body.set("password", password);
+      body.append("username", username);
+      body.append("password", password);
 
-      const response = await axios.post(`${API_URL}/api/auth/login`, body.toString(), {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      const response = await axios.post(`${API_URL}/api/auth/login`, body, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
         timeout: 20000,
       });
 
-      const { access_token, user_id, role } = response.data || {};
+      const { access_token, user_id, role } = response.data;
 
-      if (!access_token) {
-        return { success: false, error: "Login failed: no access token returned." };
-      }
-
-      localStorage.setItem("token", access_token);
-      setToken(access_token);
-
-      // basic user (quick UI), then /me loads the full profile
       const basicUserInfo = {
         id: user_id,
         username,
-        role: role || "client",
+        role,
         portfolio_access: getPortfolioAccessByUsername(username),
       };
 
+      setToken(access_token);
       setUser(basicUserInfo);
-      localStorage.setItem("user", JSON.stringify(basicUserInfo));
+      persistAuth(access_token, basicUserInfo);
 
-      // try to refresh full profile (non-blocking)
-      fetchUserProfile().catch(() => {});
+      // fetch full profile in background (best effort)
+      try {
+        const profile = await fetchUserProfile(access_token);
+        if (profile?.role === "admin") {
+          await fetchAllClients(access_token);
+        }
+      } catch {
+        // ignore; basic auth still works
+      }
 
-      return { success: true, role: role || "client" };
+      return { success: true, role };
     } catch (error) {
       console.error("Login error:", error);
 
       let errorMessage = "Login failed";
 
-      if (
-        error.code === "ECONNABORTED" ||
-        error.message?.toLowerCase().includes("timeout")
-      ) {
-        errorMessage = `Backend timeout. If you're on Render free tier, it may be sleeping. Also check backend deploy health. API: ${API_URL}`;
+      if (error.code === "ECONNABORTED") {
+        errorMessage = "Login timed out. Backend may be sleeping/spinning up (Render free tier) or down.";
       } else if (error.code === "ERR_NETWORK") {
-        errorMessage = `Cannot connect to backend at ${API_URL}. Check VITE_API_URL and backend status.`;
+        errorMessage = `Cannot connect to backend at ${API_URL}. Check Render status / URL / CORS.`;
       } else if (error.response?.status === 401) {
         errorMessage = "Invalid username or password";
-      } else if (error.response?.status === 422) {
-        errorMessage =
-          "Login request format invalid (422). Ensure Content-Type is application/x-www-form-urlencoded and body has username/password.";
       } else if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.message) {
@@ -173,14 +201,6 @@ export const UserProvider = ({ children }) => {
 
       return { success: false, error: errorMessage };
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
-    setAllClients([]);
   };
 
   const signup = async (userData) => {
@@ -195,24 +215,19 @@ export const UserProvider = ({ children }) => {
         timeout: 20000,
       });
 
-      const { access_token, user_id, role, message, activation_link } = response.data || {};
-
-      if (access_token) {
-        localStorage.setItem("token", access_token);
-        setToken(access_token);
-      }
+      const { access_token, user_id, role, message, activation_link } = response.data;
 
       const basicUserInfo = {
         id: user_id,
         username: userData.username,
         full_name: userData.full_name,
-        role: role || "client",
+        role,
         portfolio_access: [],
       };
 
+      setToken(access_token);
       setUser(basicUserInfo);
-      localStorage.setItem("user", JSON.stringify(basicUserInfo));
-      setLoading(false);
+      persistAuth(access_token, basicUserInfo);
 
       return {
         success: true,
@@ -225,14 +240,16 @@ export const UserProvider = ({ children }) => {
       console.error("Signup error:", error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message || "Signup failed",
+        error: error.response?.data?.detail || "Signup failed",
       };
     }
   };
 
+  // visible clients to current user
   const getAllClients = () => {
     if (!user) return [];
     if (user.role === "admin") return allClients || [];
+
     return [
       {
         username: user.username,
@@ -245,18 +262,25 @@ export const UserProvider = ({ children }) => {
     ];
   };
 
-  const value = {
-    user,
-    loading,
-    token,
-    allClients,
-    login,
-    logout,
-    signup,
-    getAllClients,
-    fetchAllClients,
-    isAuthenticated: !!token,
+  const logout = () => {
+    clearAuth();
   };
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      token,
+      allClients,
+      login,
+      logout,
+      signup,
+      getAllClients,
+      fetchAllClients,
+      isAuthenticated: !!token,
+    }),
+    [user, loading, token, allClients]
+  );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };
