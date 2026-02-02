@@ -10,7 +10,7 @@ const rawBase =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? "http://localhost:8002" : "");
 
-const API_BASE = String(rawBase).replace(/\/+$/, ""); // trim trailing slash ('' -> '')
+const API_BASE = String(rawBase).replace(/\/+$/, ""); // trim trailing slash
 
 export function makeClient(getToken) {
   const client = axios.create({

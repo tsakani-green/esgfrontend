@@ -17,20 +17,10 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Close, Email } from "@mui/icons-material";
-import { useUser } from "../contexts/UserContext";
 import axios from "axios";
-import { API_BASE as API_URL } from "../lib/api.js";
+import { API_BASE } from "../lib/api.js";
+import { useUser } from "../contexts/UserContext";
 import logo from "../assets/AfricaESG.AI.png";
-
-function safeDetail(detail) {
-  if (!detail) return "";
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) {
-    return detail.map((d) => d?.msg || d?.message || JSON.stringify(d)).join(", ");
-  }
-  if (typeof detail === "object") return JSON.stringify(detail);
-  return String(detail);
-}
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -59,15 +49,10 @@ const Login = () => {
         if (result.role === "admin") navigate("/admin");
         else navigate("/dashboard");
       } else {
-        setError(String(result?.error || "Failed to login"));
+        setError(result?.error || "Failed to login");
       }
     } catch (err) {
-      // extra safety: never render objects/arrays
-      const msg =
-        safeDetail(err?.response?.data?.detail) ||
-        err?.message ||
-        "Failed to login";
-      setError(String(msg));
+      setError(err.response?.data?.detail || err.message || "Failed to login");
     } finally {
       setLoading(false);
     }
@@ -79,6 +64,8 @@ const Login = () => {
     setResetLoading(true);
 
     try {
+      const API_URL = API_BASE || "";
+
       await axios.post(
         `${API_URL}/api/auth/forgot-password`,
         { email: resetEmail },
@@ -89,11 +76,11 @@ const Login = () => {
       setResetEmail("");
     } catch (err) {
       console.error("Password reset error:", err);
-      const msg =
-        safeDetail(err?.response?.data?.detail) ||
-        err?.message ||
-        "Failed to send reset email. Please try again.";
-      setResetError(String(msg));
+      setResetError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Failed to send reset email. Please try again."
+      );
     } finally {
       setResetLoading(false);
     }
@@ -171,7 +158,7 @@ const Login = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+              disabled={loading || !username || !password}
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
@@ -189,7 +176,7 @@ const Login = () => {
 
             <Box textAlign="center">
               <Link component={RouterLink} to="/signup" variant="body2">
-                Don't have an account? Sign up
+                Don&apos;t have an account? Sign up
               </Link>
             </Box>
           </Box>
@@ -205,7 +192,13 @@ const Login = () => {
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle sx={{ pb: 2 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <Email sx={{ mr: 2, color: "primary.main" }} />
               <Typography variant="h6">Reset Your Password</Typography>
@@ -220,7 +213,8 @@ const Login = () => {
           {!resetSuccess ? (
             <Box component="form" onSubmit={handleForgotPassword}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Enter your email address and we'll send you a link to reset your password.
+                Enter your email address and we&apos;ll send you a link to reset
+                your password.
               </Typography>
 
               {resetError && (
@@ -250,7 +244,11 @@ const Login = () => {
 
               <DialogActions sx={{ px: 0, pb: 0 }}>
                 <Button onClick={handleForgotPasswordClose}>Cancel</Button>
-                <Button type="submit" variant="contained" disabled={resetLoading || !resetEmail}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={resetLoading || !resetEmail}
+                >
                   {resetLoading ? "Sending..." : "Send Reset Link"}
                 </Button>
               </DialogActions>
@@ -277,8 +275,9 @@ const Login = () => {
                   Check Your Email
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  We've sent a password reset link to your email address. Please check your inbox and
-                  follow the instructions to reset your password.
+                  We&apos;ve sent a password reset link to your email address.
+                  Please check your inbox and follow the instructions to reset
+                  your password.
                 </Typography>
               </Box>
 
