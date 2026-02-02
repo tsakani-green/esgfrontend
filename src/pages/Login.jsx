@@ -36,6 +36,7 @@ const Login = () => {
 
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
+  const [resendActivationLink, setResendActivationLink] = useState('');
 
   const { login } = useUser();
   const navigate = useNavigate();
@@ -46,10 +47,12 @@ const Login = () => {
     try {
       const emailOrUsername = username || '';
       const res = await axios.post(`${API_BASE}/api/auth/resend-activation`, { email: emailOrUsername }, { timeout: 15000 });
-      setResendMessage(res.data?.activation_link ? 'Activation link sent (dev)' : 'Activation email sent. Check your inbox.');
+      setResendMessage(res.data?.message || 'Activation email sent. Check your inbox.');
+      setResendActivationLink(res.data?.activation_link || '');
     } catch (err) {
       console.error('Resend activation error:', err);
       setResendMessage(err.response?.data?.detail || 'Failed to send activation email');
+      setResendActivationLink('');
     } finally {
       setResendLoading(false);
     }
@@ -142,11 +145,20 @@ const Login = () => {
 
                 {/* If account is not activated, give the user a quick resend action */}
                 {error.toLowerCase().includes('not activated') && (
-                  <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Button size="small" onClick={handleResendActivation} disabled={resendLoading}>
-                      {resendLoading ? 'Sending...' : 'Resend activation email'}
-                    </Button>
-                    {resendMessage && <Typography variant="caption" sx={{ ml: 1 }}>{resendMessage}</Typography>}
+                  <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center', flexDirection: 'column' }}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Button size="small" onClick={handleResendActivation} disabled={resendLoading}>
+                        {resendLoading ? 'Sending...' : 'Resend activation email'}
+                      </Button>
+                      {resendMessage && <Typography variant="caption" sx={{ ml: 1 }}>{resendMessage}</Typography>}
+                    </Box>
+
+                    {/* Show activation link in development if provided */}
+                    {resendActivationLink && (
+                      <Box sx={{ mt: 1, wordBreak: 'break-all', textAlign: 'center' }}>
+                        <Link href={resendActivationLink} target="_blank" rel="noopener">Open activation link</Link>
+                      </Box>
+                    )}
                   </Box>
                 )}
               </Box>
