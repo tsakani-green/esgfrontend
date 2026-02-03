@@ -1,21 +1,22 @@
 // frontend/src/lib/api.js
 import axios from "axios";
 
-// Vite provides `import.meta.env.DEV` and `import.meta.env.PROD`.
 // Behaviour:
 // - If VITE_API_URL is set at build time, use it (trim trailing slash)
-// - In development (DEV) default to localhost:8002
-// - In production (PROD) default to a relative base so the app can call `/api/*` on the same origin
+// - In development (DEV) default to http://localhost:8003  (match your backend)
+// - In production (PROD) default to '' (same origin) — only works if frontend+backend share a domain.
+//   If your backend is hosted separately (Render/Railway/etc.), set VITE_API_URL on Vercel.
 const rawBase =
   import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? "http://localhost:8002" : "");
+  (import.meta.env.DEV ? "http://localhost:8003" : "");
 
-const API_BASE = String(rawBase).replace(/\/+$/, ""); // trim trailing slash ('' -> '')
+const API_BASE = String(rawBase).replace(/\/+$/, ""); // trim trailing slash
 
 export function makeClient(getToken) {
   const client = axios.create({
     baseURL: API_BASE,
     timeout: 30000,
+    withCredentials: true, // safe; helps if you ever use cookies
   });
 
   client.interceptors.request.use((config) => {

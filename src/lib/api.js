@@ -1,14 +1,16 @@
 // frontend/src/lib/api.js
 import axios from "axios";
 
-// If VITE_API_URL is set at build time, use it (trim trailing slash)
-// In DEV default to localhost:8002
-// In PROD default to '' (same-origin) so app can call /api/*
+// Behaviour:
+// - If VITE_API_URL is set at build time, use it (trim trailing slash)
+// - In development (DEV) default to http://localhost:8002
+// - In production (PROD) default to '' (same origin)
+//   BUT since your backend is on Render, you MUST set VITE_API_URL on Vercel.
 const rawBase =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? "http://localhost:8002" : "");
 
-const API_BASE = String(rawBase).replace(/\/+$/, "");
+export const API_BASE = String(rawBase).replace(/\/+$/, "");
 
 export function makeClient(getToken) {
   const client = axios.create({
@@ -24,5 +26,3 @@ export function makeClient(getToken) {
 
   return client;
 }
-
-export { API_BASE };

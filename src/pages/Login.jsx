@@ -35,28 +35,33 @@ const Login = () => {
   const [resetLoading, setResetLoading] = useState(false);
 
   const [resendLoading, setResendLoading] = useState(false);
-  const [resendMessage, setResendMessage] = useState('');
-  const [resendActivationLink, setResendActivationLink] = useState('');
+  const [resendMessage, setResendMessage] = useState("");
+  const [resendActivationLink, setResendActivationLink] = useState("");
 
   const { login } = useUser();
   const navigate = useNavigate();
 
   const handleResendActivation = async () => {
-    setResendMessage('');
+    setResendMessage("");
+    setResendActivationLink("");
     setResendLoading(true);
+
     try {
-      const emailOrUsername = username || '';
-      const res = await axios.post(`${API_BASE}/api/auth/resend-activation`, { email: emailOrUsername }, { timeout: 15000 });
-      setResendMessage(res.data?.message || 'Activation email sent. Check your inbox.');
-      setResendActivationLink(res.data?.activation_link || '');
+      const emailOrUsername = username || "";
+      const res = await axios.post(
+        `${API_BASE}/api/auth/resend-activation`,
+        { email: emailOrUsername },
+        { timeout: 15000 }
+      );
+      setResendMessage(res.data?.message || "Activation email sent. Check your inbox.");
+      setResendActivationLink(res.data?.activation_link || "");
     } catch (err) {
-      console.error('Resend activation error:', err);
-      setResendMessage(err.response?.data?.detail || 'Failed to send activation email');
-      setResendActivationLink('');
+      console.error("Resend activation error:", err);
+      setResendMessage(err.response?.data?.detail || "Failed to send activation email");
     } finally {
       setResendLoading(false);
     }
-  }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,14 +71,13 @@ const Login = () => {
     try {
       const result = await login(username, password);
 
-      if (result.success) {
-        if (result.role === "admin") navigate("/admin");
-        else navigate("/dashboard");
+      if (result?.success) {
+        navigate(result.role === "admin" ? "/admin" : "/dashboard");
       } else {
-        setError(result.error || "Failed to login");
+        setError(result?.error || "Failed to login");
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to login");
+      setError(err?.response?.data?.detail || "Failed to login");
     } finally {
       setLoading(false);
     }
@@ -94,9 +98,7 @@ const Login = () => {
       setResetEmail("");
     } catch (err) {
       console.error("Password reset error:", err);
-      setResetError(
-        err.response?.data?.detail || "Failed to send reset email. Please try again."
-      );
+      setResetError(err.response?.data?.detail || "Failed to send reset email. Please try again.");
     } finally {
       setResetLoading(false);
     }
@@ -112,14 +114,7 @@ const Login = () => {
 
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
+      <Box sx={{ marginTop: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <Paper elevation={3} sx={{ p: 4, width: "100%" }}>
           <Box sx={{ textAlign: "center", mb: 3 }}>
             <Box
@@ -139,24 +134,26 @@ const Login = () => {
           <Box component="form" onSubmit={handleSubmit}>
             {error && (
               <Box sx={{ mb: 2 }}>
-                <Alert severity="error">
-                  {error}
-                </Alert>
+                <Alert severity="error">{error}</Alert>
 
-                {/* If account is not activated, give the user a quick resend action */}
-                {error.toLowerCase().includes('not activated') && (
-                  <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center', flexDirection: 'column' }}>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                {error.toLowerCase().includes("not activated") && (
+                  <Box sx={{ mt: 1, display: "flex", gap: 1, alignItems: "center", flexDirection: "column" }}>
+                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                       <Button size="small" onClick={handleResendActivation} disabled={resendLoading}>
-                        {resendLoading ? 'Sending...' : 'Resend activation email'}
+                        {resendLoading ? "Sending..." : "Resend activation email"}
                       </Button>
-                      {resendMessage && <Typography variant="caption" sx={{ ml: 1 }}>{resendMessage}</Typography>}
+                      {resendMessage && (
+                        <Typography variant="caption" sx={{ ml: 1 }}>
+                          {resendMessage}
+                        </Typography>
+                      )}
                     </Box>
 
-                    {/* Show activation link in development if provided */}
                     {resendActivationLink && (
-                      <Box sx={{ mt: 1, wordBreak: 'break-all', textAlign: 'center' }}>
-                        <Link href={resendActivationLink} target="_blank" rel="noopener">Open activation link</Link>
+                      <Box sx={{ mt: 1, wordBreak: "break-all", textAlign: "center" }}>
+                        <Link href={resendActivationLink} target="_blank" rel="noopener">
+                          Open activation link
+                        </Link>
                       </Box>
                     )}
                   </Box>
@@ -184,23 +181,12 @@ const Login = () => {
               required
             />
 
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
+            <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
 
             <Box textAlign="center" sx={{ mb: 2 }}>
-              <Link
-                component="button"
-                variant="body2"
-                onClick={() => setForgotPasswordOpen(true)}
-                sx={{ cursor: "pointer" }}
-              >
+              <Link component="button" variant="body2" onClick={() => setForgotPasswordOpen(true)} sx={{ cursor: "pointer" }}>
                 Forgot your password?
               </Link>
             </Box>
@@ -214,14 +200,7 @@ const Login = () => {
         </Paper>
       </Box>
 
-      {/* Forgot Password Dialog */}
-      <Dialog
-        open={forgotPasswordOpen}
-        onClose={handleForgotPasswordClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
-      >
+      <Dialog open={forgotPasswordOpen} onClose={handleForgotPasswordClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ pb: 2 }}>
           <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <Box sx={{ display: "flex", alignItems: "center" }}>
