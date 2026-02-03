@@ -1,21 +1,23 @@
 // frontend/src/lib/api.js
 import axios from "axios";
 
-// Behaviour:
-// - If VITE_API_URL is set at build time, use it (trim trailing slash)
-// - In development (DEV) default to http://localhost:8002
-// - In production (PROD) default to '' (same origin)
-//   BUT since your backend is on Render, you MUST set VITE_API_URL on Vercel.
-const rawBase =
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? "http://localhost:8002" : "");
+/**
+ * Strategy:
+ * - DEV (local): use "/api" so Vite proxy forwards to your backend
+ * - PROD (Vercel): use VITE_API_URL (e.g. https://esgbackend-l4fc.onrender.com)
+ */
+const rawBase = import.meta.env.DEV
+  ? "" // <-- important: same-origin, so "/api" hits Vite proxy locally
+  : (import.meta.env.VITE_API_URL || "");
 
-export const API_BASE = String(rawBase).replace(/\/+$/, "");
+const API_BASE = String(rawBase).replace(/\/+$/, ""); // trim trailing slash
 
 export function makeClient(getToken) {
   const client = axios.create({
     baseURL: API_BASE,
     timeout: 30000,
+    // If you're not using cookie auth, keep this false:
+    withCredentials: false,
   });
 
   client.interceptors.request.use((config) => {
@@ -26,3 +28,5 @@ export function makeClient(getToken) {
 
   return client;
 }
+
+export { API_BASE };
