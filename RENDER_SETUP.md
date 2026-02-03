@@ -1,97 +1,68 @@
-# Render Deployment Setup - Frontend
+# Frontend Deployment Setup (Render / Vercel)
 
 ## Overview
-The frontend needs to know the backend API URL when deployed on Render. This guide explains how to configure it.
+The frontend needs to know the backend API URL at *build time* so client requests go to the correct service. This guide covers adding the environment variables and verifying connectivity.
 
-## Current Issue
-- Frontend: `https://frontend-c3bv.onrender.com/` (or similar)
-- Backend: Not configured in frontend's environment
-- Result: CORS and connection errors when trying to log in
+## Env vars to set
+- **VITE_API_URL** (required for production builds)
+  - Value: `https://<your-backend-service>.onrender.com` (no trailing slash)
+  - Purpose: Base URL used by the frontend to call the backend API (e.g. `https://api.example.com`)
+- **VITE_WS_URL** (optional for websockets)
+  - Value: `wss://<your-backend-service>.onrender.com` or production wss URL
+- **Note:** Vite reads `VITE_` variables at *build time*. After changing these, you must redeploy the frontend.
 
-## Solution: Set VITE_API_URL Environment Variable
+## How to set env vars (Render)
+1. Open your Frontend service in Render
+2. Go to **Settings → Environment**
+3. Click **Add Environment Variable** and add `VITE_API_URL` with the backend URL
+4. Save and **Manual Deploy** (or push to repo to trigger auto-deploy)
 
-### Step 1: Identify Your Backend Service URL
-On Render, you have a backend admin service deployed. Find its URL:
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Find your `backendadmin` service
-3. Copy its public URL (looks like: `https://backendadmin-xxxx.onrender.com`)
+## How to set env vars (Vercel)
+1. Open your Vercel project
+2. Go to **Settings → Environment Variables**
+3. Add `VITE_API_URL` in the **Production** scope (and Preview if desired)
+4. Click **Redeploy** from the project Overview or push a commit
 
-### Step 2: Configure Frontend Environment Variables in Render
+## Backend envs to verify (Render)
+- **CORS_ORIGINS** (comma-separated) — include your frontend URL(s)
+  - Example: `https://esgfrontend-delta.vercel.app,https://esgfrontend.example.com`
+- **FRONTEND_URL** — set to your frontend base URL
 
-1. Go to your **frontend** service in Render dashboard
-2. Click **Settings**
-3. Scroll to **Environment**
-4. Click **Add Environment Variable**
-5. Add:
-   - **Key:** `VITE_API_URL`
-   - **Value:** `https://backendadmin-xxxx.onrender.com` (replace with your actual backend URL)
-6. Click **Save**
+## Redeploy steps
+1. Set `VITE_API_URL` on your frontend host (Render or Vercel)
+2. Trigger a redeploy (Manual Deploy / Redeploy / commit)
+3. Watch the build logs for `VITE_API_URL` usage (build output won’t echo secret values but the build should succeed)
 
-### Step 3: Trigger a Redeploy
-1. Go back to the main service page
-2. Click **Manual Deploy** (or wait for next commit to trigger auto-deploy)
-3. Watch the build logs for any errors
+## Quick verification commands
+- DNS/Connectivity
+  - Windows PowerShell: `nslookup <your-backend-service>.onrender.com`
+  - PowerShell: `Test-NetConnection -ComputerName <your-backend-service>.onrender.com -Port 443`
+- Health endpoint
+  - `curl -i https://<your-backend-service>.onrender.com/api/status`
+- CORS check (ensure backend allows your frontend origin)
+  - `curl -i -H "Origin: https://<your-frontend-domain>" https://<your-backend-service>.onrender.com/api/status`
+    - Expect `Access-Control-Allow-Origin: https://<your-frontend-domain>` in response headers
 
-## Verification
+## Browser verification
+1. Open the frontend URL and attempt to log in
+2. Open DevTools → Network tab and watch requests to `VITE_API_URL` / `/api/*`
+3. Confirm there are no `ERR_NAME_NOT_RESOLVED` DNS errors, and check CORS errors in Console if any
 
-After redeployment, test the login:
-1. Open your frontend URL in a browser
-2. Try logging in with:
-   - **Username:** `admin`
-   - **Password:** `admin123`
-3. If successful, you'll see the dashboard
-4. If it fails, check the browser console (F12 → Console tab) for error messages
-
-## Common Issues
-
-### "Cannot connect to backend at http://localhost:8002"
-- **Cause:** VITE_API_URL environment variable is not set
-- **Fix:** Make sure you added the environment variable in Render and triggered a redeploy
-
-### "CORS Connection Refused"
-- **Cause:** Backend CORS settings don't include the frontend URL
-- **Fix:** On the `backendadmin` Render service, ensure `CORS_ORIGINS` environment variable includes your frontend URL
-  - Example: `https://frontend-c3bv.onrender.com,https://frontend-c3bv.onrender.com`
-
-### Logs show "502 Bad Gateway"
-- **Cause:** Backend service might be down or not responding
-- **Fix:** Check the backendadmin service logs and ensure it deployed successfully
-
-## Local Development
-
-For local development, use `.env.example`:
+## Local development
+- Use `.env.local` or `.env` with:
 ```env
 VITE_API_URL=http://localhost:8002
 ```
+- Start backend locally: `cd esgbackend && uvicorn app.main:app --port 8002 --reload`
+- Start frontend dev server: `cd esgfrontend && npm run dev`
 
-Or create `.env.local`:
-```env
-VITE_API_URL=http://localhost:8002
-```
+## Common gotchas & tips
+- No trailing slash on `VITE_API_URL` (keep it clean)
+- Vite bakes `VITE_` variables at build time — redeploy after changes
+- Prefer leaving `VITE_API_URL` empty when serving frontend & backend from the same origin and use relative `/api/*` paths
 
-## What Gets Built
-
-When Render builds your frontend, it:
-1. Reads environment variables (including `VITE_API_URL`)
-2. Builds with Vite: `npm run build`
-3. Serves the static files via the Render Node.js server
-
-Vite embeds the API URL at build time, so the browser always uses the correct backend address.
-
-## Still Having Issues?
-
-1. Check Render service logs:
-   - Frontend: Settings → Logs
-   - Backend: Settings → Logs
-   
-2. Look at browser console (F12):
-   - Network tab shows API requests
-   - Console tab shows JavaScript errors
-   
-3. Verify services are actually running:
-   - Frontend shows "Status: Available"
-   - Backend shows "Status: Available"
-
-4. Test the API directly:
-   - Open a new tab and go to: `https://backendadmin-xxxx.onrender.com/api/auth/me`
-   - Should ask for login (or show error), not network error
+## Still stuck?
+- Check Render / Vercel logs for build/runtime errors
+- Confirm `CORS_ORIGINS` on backend includes your frontend origin
+- Run the `curl` checks above to confirm network reachability
+- Share the frontend build logs and a screenshot of the browser console if you want me to review them
